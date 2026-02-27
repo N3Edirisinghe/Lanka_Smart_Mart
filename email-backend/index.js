@@ -52,7 +52,6 @@ app.post('/api/send-order-email', async (req, res) => {
         const mailOptions = {
             from: `"Lanka Smart Mart" <${process.env.SMTP_EMAIL}>`,
             to: email,
-            bcc: '10nilupulthisaranga@gmail.com', // Admin notification
             subject: `Order Confirmation - #${orderId.substring(0, 8).toUpperCase()}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
@@ -84,7 +83,35 @@ app.post('/api/send-order-email', async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        res.status(200).send({ success: true, message: 'Order confirmation email sent successfully.' });
+
+        // Send a distinct email to the admin
+        const adminMailOptions = {
+            from: `"Lanka Smart Mart App" <${process.env.SMTP_EMAIL}>`,
+            to: '10nilupulthisaranga@gmail.com',
+            subject: `New Order Alert - #${orderId.substring(0, 8).toUpperCase()}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                    <h2 style="color: #d32f2f; text-align: center;">New Order Alert!</h2>
+                    <p style="color: #333; font-size: 16px;">A new order has been placed by <strong>${email}</strong>.</p>
+                    
+                    <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">Order Details</h3>
+                        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Order ID: <strong>${orderId}</strong></p>
+                        
+                        <table style="width: 100%; border-collapse: collapse;">
+                            ${itemsHtml}
+                            <tr>
+                                <td style="padding: 15px 0 0 0; font-weight: bold; color: #d32f2f;">Total Amount:</td>
+                                <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #d32f2f; font-size: 18px;">Rs. ${totalPrice.toFixed(2)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `
+        };
+        await transporter.sendMail(adminMailOptions);
+
+        res.status(200).send({ success: true, message: 'Order confirmation emails sent successfully.' });
     } catch (error) {
         console.error("Error sending order email:", error);
         res.status(500).send({ success: false, error: error.message });
