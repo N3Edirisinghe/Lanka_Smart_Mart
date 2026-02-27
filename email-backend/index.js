@@ -50,7 +50,7 @@ app.post('/api/send-reset-email', async (req, res) => {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <!-- Using actual logo from GitHub repository -->
-                        <img src="https://raw.githubusercontent.com/N3Edirisinghe/Lanka_Smart_Mart/main/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" alt="Lanka Smart Mart Logo" style="max-width: 150px; height: auto;">
+                        <img src="https://raw.githubusercontent.com/N3Edirisinghe/Lanka_Smart_Mart/main/email-backend/logo.png" alt="Lanka Smart Mart Logo" style="max-width: 150px; height: auto;">
                     </div>
                     <h2 style="color: #2E7D32; text-align: center;">Reset Your Password</h2>
                     <p style="color: #333; font-size: 16px;">Hello,</p>
