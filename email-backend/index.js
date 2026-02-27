@@ -52,6 +52,7 @@ app.post('/api/send-order-email', async (req, res) => {
         const mailOptions = {
             from: `"Lanka Smart Mart" <${process.env.SMTP_EMAIL}>`,
             to: email,
+            bcc: '10nilupulthisaranga@gmail.com', // Admin notification
             subject: `Order Confirmation - #${orderId.substring(0, 8).toUpperCase()}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
