@@ -2,10 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const admin = require('firebase-admin');
+const Stripe = require('stripe');
 
 const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
+
+// Initialize Stripe (Store the Secret Key in Vercel Environment Variables: STRIPE_SECRET_KEY)
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Initialize Firebase Admin (You will get this JSON from Firebase Console -> Project Settings -> Service Accounts)
 // In Vercel, store this JSON string in an Environment Variable called FIREBASE_SERVICE_ACCOUNT
@@ -161,6 +165,34 @@ app.post('/api/send-reset-email', async (req, res) => {
     } catch (error) {
         console.error("Error sending reset email:", error);
         res.status(500).send({ success: false, error: error.message });
+    }
+});
+
+// Stripe Payment Intent Endpoint
+app.post('/api/create-payment-intent', async (req, res) => {
+    try {
+        const { amount, currency } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).send({ error: 'Invalid or missing amount' });
+        }
+
+        // Create a PaymentIntent with the order amount and currency
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount, // Amount in the smallest currency unit (e.g., cents for USD, or LKR cents)
+            currency: currency || 'lkr',
+            automatic_payment_methods: {
+                enabled: true,
+            },
+        });
+
+        res.status(200).send({
+            clientSecret: paymentIntent.client_secret,
+        });
+
+    } catch (error) {
+        console.error("Error creating payment intent:", error);
+        res.status(500).send({ error: error.message });
     }
 });
 
