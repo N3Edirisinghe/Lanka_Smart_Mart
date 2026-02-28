@@ -48,8 +48,6 @@ app.post('/api/send-order-email', async (req, res) => {
     }
 
     try {
-        const isCOD = paymentMethod === 'COD';
-
         // Build items HTML list
         let itemsHtml = '';
         items.forEach(item => {
@@ -61,26 +59,29 @@ app.post('/api/send-order-email', async (req, res) => {
             `;
         });
 
-        const userSubject = isCOD
-            ? `Order Confirmed (Cash on Delivery) - #${orderId.substring(0, 8).toUpperCase()}`
-            : `Order Confirmed & Paid - #${orderId.substring(0, 8).toUpperCase()}`;
-
-        const userMessage = isCOD
-            ? `Thank you for shopping with Lanka Smart Mart. Your order has been successfully placed as <strong>Cash on Delivery</strong>. Please have the cash ready when your order arrives.`
-            : `Thank you for shopping with Lanka Smart Mart. Your order has been successfully placed and your payment has been processed.`;
+        // Determine payment specific message
+        const isCOD = paymentMethod === 'COD' || paymentMethod === 'Cash on Delivery';
+        const paymentHeader = isCOD ? "Order Received (Cash on Delivery)" : "Payment Successful & Order Confirmed!";
+        const paymentMessage = isCOD
+            ? "Thank you for your order! Please have the exact amount ready in cash when your delivery arrives."
+            : "Thank you for your order! We have successfully received your online payment.";
+        const paymentDetailsHtml = isCOD
+            ? `<p style="color: #ed6c02; font-weight: bold; text-align: center; font-size: 16px;">Payment Mode: Cash on Delivery (Amount due: Rs. ${totalPrice.toFixed(2)})</p>`
+            : `<p style="color: #2E7D32; font-weight: bold; text-align: center; font-size: 16px;">Payment Mode: Paid Online</p>`;
 
         const mailOptions = {
             from: `"Lanka Smart Mart" <${process.env.SMTP_EMAIL}>`,
             to: email,
-            subject: userSubject,
+            subject: isCOD ? `Order Received - #${orderId.substring(0, 8).toUpperCase()}` : `Payment Received & Order Confirmed - #${orderId.substring(0, 8).toUpperCase()}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="https://raw.githubusercontent.com/N3Edirisinghe/Lanka_Smart_Mart/main/email-backend/logo.png" alt="Lanka Smart Mart Logo" style="max-width: 150px; height: auto;">
                     </div>
-                    <h2 style="color: #2E7D32; text-align: center;">Order Confirmed!</h2>
+                    <h2 style="color: ${isCOD ? '#ed6c02' : '#2E7D32'}; text-align: center;">${paymentHeader}</h2>
                     <p style="color: #333; font-size: 16px;">Hello,</p>
-                    <p style="color: #333; font-size: 16px;">${userMessage}</p>
+                    <p style="color: #333; font-size: 16px;">${paymentMessage} Your order is now being processed.</p>
+                    ${paymentDetailsHtml}
                     
                     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
                         <h3 style="color: #333; margin-top: 0;">Order Summary</h3>
@@ -89,12 +90,8 @@ app.post('/api/send-order-email', async (req, res) => {
                         <table style="width: 100%; border-collapse: collapse;">
                             ${itemsHtml}
                             <tr>
-                                <td style="padding: 15px 0 0 0; font-weight: bold; color: #666;">Payment Method:</td>
-                                <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #666; font-size: 14px;">${isCOD ? 'Cash on Delivery' : (paymentMethod || 'Online Payment')}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px 0 0 0; font-weight: bold; color: #2E7D32;">Total Amount:</td>
-                                <td style="padding: 10px 0 0 0; text-align: right; font-weight: bold; color: #2E7D32; font-size: 18px;">Rs. ${totalPrice.toFixed(2)}</td>
+                                <td style="padding: 15px 0 0 0; font-weight: bold; color: #2E7D32;">Total Amount:</td>
+                                <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #2E7D32; font-size: 18px;">Rs. ${totalPrice.toFixed(2)}</td>
                             </tr>
                         </table>
                     </div>
@@ -109,21 +106,15 @@ app.post('/api/send-order-email', async (req, res) => {
         await transporter.sendMail(mailOptions);
 
         // Send a distinct email to the admin
-        const adminSubject = isCOD
-            ? `New COD Order Alert - #${orderId.substring(0, 8).toUpperCase()}`
-            : `New Paid Order Alert - #${orderId.substring(0, 8).toUpperCase()}`;
-
         const adminMailOptions = {
             from: `"Lanka Smart Mart App" <${process.env.SMTP_EMAIL}>`,
             to: '10nilupulthisaranga@gmail.com',
-            subject: adminSubject,
+            subject: `New Order Alert [${isCOD ? 'COD' : 'PAID'}] - #${orderId.substring(0, 8).toUpperCase()}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <h2 style="color: #d32f2f; text-align: center;">New Order Alert!</h2>
                     <p style="color: #333; font-size: 16px;">A new order has been placed by <strong>${email}</strong>.</p>
-                    <p style="color: #333; font-size: 14px; background-color: ${isCOD ? '#ffcdd2' : '#c8e6c9'}; padding: 10px; border-radius: 5px; text-align: center;">
-                        <strong>Payment Type:</strong> ${isCOD ? 'Cash on Delivery (Payment Pending)' : 'Online Payment (Paid via ' + (paymentMethod || 'Card') + ')'}
-                    </p>
+                    <p style="color: #d32f2f; font-weight: bold; font-size: 16px; text-align: center; border: 1px solid #d32f2f; padding: 10px; border-radius: 5px;">Payment Method: ${isCOD ? 'Cash on Delivery (Pending)' : 'Online Payment (Received)'}</p>
                     
                     <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
                         <h3 style="color: #333; margin-top: 0;">Order Details</h3>
