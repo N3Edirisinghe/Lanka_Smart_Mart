@@ -8,8 +8,8 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// Initialize Stripe (Store the Secret Key in Vercel Environment Variables: STRIPE_SECRET_KEY)
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe dynamically within the endpoint to prevent Vercel boot crashes
+// if the environment variable evaluates to undefined too early.
 
 // Initialize Firebase Admin (You will get this JSON from Firebase Console -> Project Settings -> Service Accounts)
 // In Vercel, store this JSON string in an Environment Variable called FIREBASE_SERVICE_ACCOUNT
@@ -171,6 +171,11 @@ app.post('/api/send-reset-email', async (req, res) => {
 // Stripe Payment Intent Endpoint
 app.post('/api/create-payment-intent', async (req, res) => {
     try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return res.status(500).send({ error: 'Stripe Secret Key is missing from Server Environment configuration.' });
+        }
+
+        const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
         const { amount, currency } = req.body;
 
         if (!amount || amount <= 0) {
