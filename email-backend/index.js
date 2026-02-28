@@ -227,6 +227,103 @@ app.post('/api/create-payment-intent', async (req, res) => {
     }
 });
 
+// ==========================================
+// ADMIN DASHBOARD REST APIs
+// ==========================================
+
+// Authenticate Admin Password
+app.post('/api/admin/verify', (req, res) => {
+    const { password } = req.body;
+    if (!process.env.ADMIN_SECRET_PASSWORD) {
+        return res.status(500).send({ success: false, error: 'Server missing ADMIN_SECRET_PASSWORD' });
+    }
+
+    if (password === process.env.ADMIN_SECRET_PASSWORD) {
+        res.status(200).send({ success: true, message: 'Authenticated' });
+    } else {
+        res.status(401).send({ success: false, error: 'Invalid password' });
+    }
+});
+
+// Middleware to protect product modification routes
+const verifyAdmin = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).send({ success: false, error: 'Unauthorized' });
+    }
+    const token = authHeader.split(' ')[1];
+    if (token === process.env.ADMIN_SECRET_PASSWORD) {
+        next();
+    } else {
+        res.status(401).send({ success: false, error: 'Unauthorized login' });
+    }
+};
+
+// GET all products
+app.get('/api/products', async (req, res) => {
+    try {
+        if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
+        const db = admin.firestore();
+        const snapshot = await db.collection('products').get();
+        const products = [];
+        snapshot.forEach(doc => {
+            products.push({ id: doc.id, ...doc.data() });
+        });
+        res.status(200).send({ success: true, products });
+    } catch (error) {
+        console.error("Error fetching products:", error);
+        res.status(500).send({ success: false, error: error.message });
+    }
+});
+
+// POST new product (Protected)
+app.post('/api/products', verifyAdmin, async (req, res) => {
+    try {
+        if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
+        const db = admin.firestore();
+        const { name, description, price, oldPrice, imageUrl, category, stockQuantity } = req.body;
+
+        if (!name || price === undefined || !imageUrl || !category) {
+            return res.status(400).send({ success: false, error: 'Missing required product fields' });
+        }
+
+        const newProductRef = db.collection('products').doc();
+        const productData = {
+            id: newProductRef.id,
+            name,
+            description: description || '',
+            price: Number(price),
+            oldPrice: Number(oldPrice) || 0,
+            imageUrl,
+            category,
+            stockQuantity: Number(stockQuantity) || 0,
+            rating: 0.0,
+            reviewCount: 0
+        };
+
+        await newProductRef.set(productData);
+        res.status(201).send({ success: true, message: 'Product added', productId: newProductRef.id });
+    } catch (error) {
+        console.error("Error adding product:", error);
+        res.status(500).send({ success: false, error: error.message });
+    }
+});
+
+// DELETE product (Protected)
+app.delete('/api/products/:id', verifyAdmin, async (req, res) => {
+    try {
+        if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
+        const db = admin.firestore();
+        const productId = req.params.id;
+
+        await db.collection('products').doc(productId).delete();
+        res.status(200).send({ success: true, message: 'Product deleted' });
+    } catch (error) {
+        console.error("Error deleting product:", error);
+        res.status(500).send({ success: false, error: error.message });
+    }
+});
+
 // For local testing
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
