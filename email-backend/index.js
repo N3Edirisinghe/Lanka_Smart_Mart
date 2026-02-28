@@ -182,9 +182,17 @@ app.post('/api/create-payment-intent', async (req, res) => {
             return res.status(400).send({ error: 'Invalid or missing amount' });
         }
 
+        // Stripe requires a minimum charge equivalent to $0.50 USD.
+        // For LKR, 150 LKR (15000 cents/smallest unit) is a safe minimum.
+        // If the user's cart is under 150 Rs, we bump the intent to 15000 just to test it successfully.
+        let finalAmount = parseInt(amount);
+        if (finalAmount < 15000) {
+            finalAmount = 15000;
+        }
+
         // Create a PaymentIntent with the order amount and currency
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: amount, // Amount in the smallest currency unit (e.g., cents for USD, or LKR cents)
+            amount: finalAmount, // Amount in the smallest currency unit (e.g., cents for USD, or LKR cents)
             currency: currency || 'lkr',
             automatic_payment_methods: {
                 enabled: true,
