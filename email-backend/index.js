@@ -202,10 +202,10 @@ app.post('/api/create-payment-intent', async (req, res) => {
 
         // Stripe requires a minimum charge equivalent to $0.50 USD.
         // For LKR, 150 LKR (15000 cents/smallest unit) is a safe minimum.
-        // If the user's cart is under 150 Rs, we bump the intent to 15000 just to test it successfully.
+        // If the user's cart is under 200 Rs, we bump the intent to 20000 just to test it successfully.
         let finalAmount = parseInt(amount);
-        if (finalAmount < 15000) {
-            finalAmount = 15000;
+        if (finalAmount < 20000) {
+            finalAmount = 20000;
         }
 
         // Create a PaymentIntent with the order amount and currency
