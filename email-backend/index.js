@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
@@ -15,10 +16,15 @@ app.use(express.json());
 // In Vercel, store this JSON string in an Environment Variable called FIREBASE_SERVICE_ACCOUNT
 if (!admin.apps.length) {
     try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+            });
+            console.log("Firebase Admin Initialized successfully.");
+        } else {
+            console.warn("FIREBASE_SERVICE_ACCOUNT is missing. Password reset functions will fail, but order emails will still attempt to send.");
+        }
     } catch (error) {
         console.error("Firebase Admin Initialization Error", error);
     }
@@ -35,13 +41,15 @@ const transporter = nodemailer.createTransport({
 });
 
 app.post('/api/send-order-email', async (req, res) => {
-    const { email, orderId, totalPrice, items } = req.body;
+    const { email, orderId, totalPrice, items, paymentMethod } = req.body;
 
     if (!email || !orderId || !items) {
         return res.status(400).send({ success: false, error: 'Missing required order details' });
     }
 
     try {
+        const isCOD = paymentMethod === 'COD';
+
         // Build items HTML list
         let itemsHtml = '';
         items.forEach(item => {
@@ -53,10 +61,18 @@ app.post('/api/send-order-email', async (req, res) => {
             `;
         });
 
+        const userSubject = isCOD
+            ? `Order Confirmed (Cash on Delivery) - #${orderId.substring(0, 8).toUpperCase()}`
+            : `Order Confirmed & Paid - #${orderId.substring(0, 8).toUpperCase()}`;
+
+        const userMessage = isCOD
+            ? `Thank you for shopping with Lanka Smart Mart. Your order has been successfully placed as <strong>Cash on Delivery</strong>. Please have the cash ready when your order arrives.`
+            : `Thank you for shopping with Lanka Smart Mart. Your order has been successfully placed and your payment has been processed.`;
+
         const mailOptions = {
             from: `"Lanka Smart Mart" <${process.env.SMTP_EMAIL}>`,
             to: email,
-            subject: `Order Confirmation - #${orderId.substring(0, 8).toUpperCase()}`,
+            subject: userSubject,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <div style="text-align: center; margin-bottom: 20px;">
@@ -64,7 +80,7 @@ app.post('/api/send-order-email', async (req, res) => {
                     </div>
                     <h2 style="color: #2E7D32; text-align: center;">Order Confirmed!</h2>
                     <p style="color: #333; font-size: 16px;">Hello,</p>
-                    <p style="color: #333; font-size: 16px;">Thank you for shopping with Lanka Smart Mart. Your order has been successfully placed and is now being processed.</p>
+                    <p style="color: #333; font-size: 16px;">${userMessage}</p>
                     
                     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
                         <h3 style="color: #333; margin-top: 0;">Order Summary</h3>
@@ -73,8 +89,12 @@ app.post('/api/send-order-email', async (req, res) => {
                         <table style="width: 100%; border-collapse: collapse;">
                             ${itemsHtml}
                             <tr>
-                                <td style="padding: 15px 0 0 0; font-weight: bold; color: #2E7D32;">Total Amount:</td>
-                                <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #2E7D32; font-size: 18px;">Rs. ${totalPrice.toFixed(2)}</td>
+                                <td style="padding: 15px 0 0 0; font-weight: bold; color: #666;">Payment Method:</td>
+                                <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #666; font-size: 14px;">${isCOD ? 'Cash on Delivery' : (paymentMethod || 'Online Payment')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px 0 0 0; font-weight: bold; color: #2E7D32;">Total Amount:</td>
+                                <td style="padding: 10px 0 0 0; text-align: right; font-weight: bold; color: #2E7D32; font-size: 18px;">Rs. ${totalPrice.toFixed(2)}</td>
                             </tr>
                         </table>
                     </div>
@@ -89,14 +109,21 @@ app.post('/api/send-order-email', async (req, res) => {
         await transporter.sendMail(mailOptions);
 
         // Send a distinct email to the admin
+        const adminSubject = isCOD
+            ? `New COD Order Alert - #${orderId.substring(0, 8).toUpperCase()}`
+            : `New Paid Order Alert - #${orderId.substring(0, 8).toUpperCase()}`;
+
         const adminMailOptions = {
             from: `"Lanka Smart Mart App" <${process.env.SMTP_EMAIL}>`,
             to: '10nilupulthisaranga@gmail.com',
-            subject: `New Order Alert - #${orderId.substring(0, 8).toUpperCase()}`,
+            subject: adminSubject,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <h2 style="color: #d32f2f; text-align: center;">New Order Alert!</h2>
                     <p style="color: #333; font-size: 16px;">A new order has been placed by <strong>${email}</strong>.</p>
+                    <p style="color: #333; font-size: 14px; background-color: ${isCOD ? '#ffcdd2' : '#c8e6c9'}; padding: 10px; border-radius: 5px; text-align: center;">
+                        <strong>Payment Type:</strong> ${isCOD ? 'Cash on Delivery (Payment Pending)' : 'Online Payment (Paid via ' + (paymentMethod || 'Card') + ')'}
+                    </p>
                     
                     <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
                         <h3 style="color: #333; margin-top: 0;">Order Details</h3>
