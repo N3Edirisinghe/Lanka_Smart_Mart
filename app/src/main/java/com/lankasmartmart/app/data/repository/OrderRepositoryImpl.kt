@@ -88,6 +88,7 @@ class OrderRepositoryImpl @Inject constructor(
                                         put("email", userEmail)
                                         put("orderId", newOrderId)
                                         put("totalPrice", finalOrder.totalPrice)
+                                        put("paymentMethod", finalOrder.paymentMethod)
                                         put("items", itemsArray)
                                     }.toString()
 
