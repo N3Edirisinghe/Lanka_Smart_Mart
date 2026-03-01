@@ -264,7 +264,8 @@ app.get('/api/products', async (req, res) => {
     try {
         if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
         const db = admin.firestore();
-        const snapshot = await db.collection('products').get();
+        // Safety Limit: Prevent Quota Exceeded crashes
+        const snapshot = await db.collection('products').limit(150).get();
         const products = [];
         snapshot.forEach(doc => {
             products.push({ id: doc.id, ...doc.data() });
@@ -282,7 +283,8 @@ app.get('/api/orders', verifyAdmin, async (req, res) => {
         if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
         const db = admin.firestore();
         // Assuming your app saves orders to 'orders' collection
-        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+        // Safety Limit: Prevent Quota Exceeded crashes
+        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').limit(150).get();
         const orders = [];
         snapshot.forEach(doc => {
             orders.push({ id: doc.id, ...doc.data() });
@@ -300,9 +302,9 @@ app.get('/api/users', verifyAdmin, async (req, res) => {
         if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
 
         // Use Firebase Auth to bypass Firestore quota limit
-        const limitRes = await admin.auth().listUsers(1000);
+        const listUsersResult = await admin.auth().listUsers(150);
 
-        const users = limitRes.users.map(userRecord => ({
+        const users = listUsersResult.users.map(userRecord => ({
             id: userRecord.uid,
             email: userRecord.email,
             name: userRecord.displayName || '',
