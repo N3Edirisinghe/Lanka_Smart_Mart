@@ -8,7 +8,10 @@ import {
 
 export default function DashboardPage() {
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('inventory');
     const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -26,18 +29,62 @@ export default function DashboardPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        fetchProducts();
-    }, []);
+        if (activeTab === 'inventory' && products.length === 0) fetchProducts();
+        else if (activeTab === 'orders' && orders.length === 0) fetchOrders();
+        else if (activeTab === 'users' && users.length === 0) fetchUsers();
+    }, [activeTab]);
 
     const fetchProducts = async () => {
         try {
             setIsLoading(true);
-            const res = await fetch('https://lanka-smart-mart.vercel.app/api/products');
+            const res = await fetch('https://lanka-smart-mart.vercel.app/api/products', {
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('adminToken')}`
+                }
+            });
             const data = await res.json();
             if (data.success) {
                 setProducts(data.products);
             } else {
                 setError(data.error || 'System failed to retrieve inventory');
+            }
+        } catch (err) {
+            setError('Connection timeout. Gateway unavailable.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchOrders = async () => {
+        try {
+            setIsLoading(true);
+            const res = await fetch('https://lanka-smart-mart.vercel.app/api/orders', {
+                headers: { 'Authorization': `Bearer ${sessionStorage.getItem('adminToken')}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOrders(data.orders);
+            } else {
+                setError(data.error || 'System failed to retrieve orders');
+            }
+        } catch (err) {
+            setError('Connection timeout. Gateway unavailable.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchUsers = async () => {
+        try {
+            setIsLoading(true);
+            const res = await fetch('https://lanka-smart-mart.vercel.app/api/users', {
+                headers: { 'Authorization': `Bearer ${sessionStorage.getItem('adminToken')}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setUsers(data.users);
+            } else {
+                setError(data.error || 'System failed to retrieve users');
             }
         } catch (err) {
             setError('Connection timeout. Gateway unavailable.');
@@ -123,19 +170,21 @@ export default function DashboardPage() {
 
                 <nav className="flex-1 px-4 py-8 space-y-3">
                     <p className="px-4 text-xs font-semibold uppercase tracking-widest text-slate-600 mb-4">Core Modules</p>
-                    <a href="#" className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all">
+                    <button onClick={() => setActiveTab('inventory')} className={`w-full group flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'inventory' ? 'bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'hover:bg-slate-900 hover:text-white border border-transparent hover:border-white/5'}`}>
                         <Package className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         Inventory Matrix
-                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                    </a>
-                    <a href="#" className="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-900 hover:text-white transition-all border border-transparent hover:border-white/5">
+                        {activeTab === 'inventory' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />}
+                    </button>
+                    <button onClick={() => setActiveTab('orders')} className={`w-full group flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'hover:bg-slate-900 hover:text-white border border-transparent hover:border-white/5'}`}>
                         <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         Active Orders
-                    </a>
-                    <a href="#" className="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-900 hover:text-white transition-all border border-transparent hover:border-white/5">
+                        {activeTab === 'orders' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />}
+                    </button>
+                    <button onClick={() => setActiveTab('users')} className={`w-full group flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'users' ? 'bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'hover:bg-slate-900 hover:text-white border border-transparent hover:border-white/5'}`}>
                         <Users className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         Customer Nodes
-                    </a>
+                        {activeTab === 'users' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />}
+                    </button>
                 </nav>
 
                 <div className="p-6 border-t border-white/5 bg-slate-900/20">
@@ -166,7 +215,9 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-4">
                         <LayoutDashboard className="w-6 h-6 text-emerald-500 lg:hidden" />
                         <div>
-                            <h1 className="text-xl font-bold text-white tracking-tight">Inventory Management</h1>
+                            <h1 className="text-xl font-bold text-white tracking-tight">
+                                {activeTab === 'inventory' ? 'Inventory Management' : activeTab === 'orders' ? 'Order Processing' : 'User Security & Access'}
+                            </h1>
                             <p className="text-xs text-slate-500 font-medium">Real-time sync to remote database</p>
                         </div>
                     </div>
@@ -188,18 +239,23 @@ export default function DashboardPage() {
                         {/* Header / Action Controls */}
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 bg-slate-950/30 p-6 rounded-3xl border border-white/5 shadow-lg">
                             <div>
-                                <h2 className="text-3xl font-bold text-white tracking-tight mb-2">Total Commodities <span className="text-emerald-500 ml-2">[{products.length}]</span></h2>
+                                <h2 className="text-3xl font-bold text-white tracking-tight mb-2">
+                                    {activeTab === 'inventory' ? 'Total Commodities' : activeTab === 'orders' ? 'Active Orders' : 'Registered Nodes'}
+                                    <span className="text-emerald-500 ml-2">[{activeTab === 'inventory' ? products.length : activeTab === 'orders' ? orders.length : users.length}]</span>
+                                </h2>
                                 <div className="flex items-center gap-3 text-sm text-slate-400">
                                     <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-white/10"><Tag className="w-3.5 h-3.5 text-emerald-400" /> Catalog Active</span>
                                     <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-white/10"><RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-400' : 'text-slate-500'}`} /> {isLoading ? 'Syncing...' : 'Synced'}</span>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setIsAddModalOpen(true)}
-                                className="group flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5"
-                            >
-                                <Plus className="w-5 h-5" /> Initialize Record
-                            </button>
+                            {activeTab === 'inventory' && (
+                                <button
+                                    onClick={() => setIsAddModalOpen(true)}
+                                    className="group flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5"
+                                >
+                                    <Plus className="w-5 h-5" /> Initialize Record
+                                </button>
+                            )}
                         </div>
 
                         {/* Error State */}
@@ -207,7 +263,7 @@ export default function DashboardPage() {
                             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-400 shadow-lg shadow-red-500/5">
                                 <AlertCircle className="w-6 h-6 shrink-0 text-red-500" />
                                 <p className="font-medium text-sm">{error}</p>
-                                <button onClick={fetchProducts} className="ml-auto px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">Re-Establish Link</button>
+                                <button onClick={() => activeTab === 'inventory' ? fetchProducts() : activeTab === 'orders' ? fetchOrders() : fetchUsers()} className="ml-auto px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">Re-Establish Link</button>
                             </motion.div>
                         )}
 
@@ -219,11 +275,32 @@ export default function DashboardPage() {
                                 <table className="w-full text-left border-collapse whitespace-nowrap">
                                     <thead>
                                         <tr className="bg-slate-900 text-slate-400 text-xs font-bold uppercase tracking-widest border-b border-white/5">
-                                            <th className="px-8 py-5">Product Identifier</th>
-                                            <th className="px-6 py-5">Category Label</th>
-                                            <th className="px-6 py-5">Market Value</th>
-                                            <th className="px-6 py-5">Inventory Qty</th>
-                                            <th className="px-8 py-5 text-right">Admin Exec</th>
+                                            {activeTab === 'inventory' && (
+                                                <>
+                                                    <th className="px-8 py-5">Product Identifier</th>
+                                                    <th className="px-6 py-5">Category Label</th>
+                                                    <th className="px-6 py-5">Market Value</th>
+                                                    <th className="px-6 py-5">Inventory Qty</th>
+                                                    <th className="px-8 py-5 text-right">Admin Exec</th>
+                                                </>
+                                            )}
+                                            {activeTab === 'orders' && (
+                                                <>
+                                                    <th className="px-8 py-5">Order ID</th>
+                                                    <th className="px-6 py-5">Customer Node</th>
+                                                    <th className="px-6 py-5">Financial Value</th>
+                                                    <th className="px-6 py-5">Payment Method</th>
+                                                    <th className="px-8 py-5 text-right">Timestamp</th>
+                                                </>
+                                            )}
+                                            {activeTab === 'users' && (
+                                                <>
+                                                    <th className="px-8 py-5">User UID</th>
+                                                    <th className="px-6 py-5">Email Address</th>
+                                                    <th className="px-6 py-5">Display Name</th>
+                                                    <th className="px-8 py-5 text-right">Registered At</th>
+                                                </>
+                                            )}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
@@ -236,28 +313,32 @@ export default function DashboardPage() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : products.length === 0 ? (
+                                        ) : (
+                                            (activeTab === 'inventory' && products.length === 0) ||
+                                            (activeTab === 'orders' && orders.length === 0) ||
+                                            (activeTab === 'users' && users.length === 0)
+                                        ) ? (
                                             <tr>
                                                 <td colSpan="5" className="px-8 py-24 text-center">
                                                     <div className="max-w-xs mx-auto flex flex-col items-center">
                                                         <div className="w-20 h-20 bg-slate-900 rounded-3xl border border-white/5 flex items-center justify-center mb-6 shadow-inner">
-                                                            <Package className="w-10 h-10 text-slate-700" />
+                                                            {activeTab === 'inventory' ? <Package className="w-10 h-10 text-slate-700" /> : activeTab === 'orders' ? <ShoppingCart className="w-10 h-10 text-slate-700" /> : <Users className="w-10 h-10 text-slate-700" />}
                                                         </div>
                                                         <p className="text-slate-300 font-semibold text-lg mb-2">Zero Records Found</p>
-                                                        <p className="text-slate-500 text-sm leading-relaxed mb-6">The remote database cluster returned an empty payload. Initialize a new record to begin.</p>
-                                                        <button onClick={() => setIsAddModalOpen(true)} className="text-emerald-400 text-sm font-bold hover:text-emerald-300 transition-colors uppercase tracking-wider flex items-center gap-2"><Plus className="w-4 h-4" /> Initialize Now</button>
+                                                        <p className="text-slate-500 text-sm leading-relaxed mb-6">The remote database cluster returned an empty payload.</p>
+                                                        {activeTab === 'inventory' && <button onClick={() => setIsAddModalOpen(true)} className="text-emerald-400 text-sm font-bold hover:text-emerald-300 transition-colors uppercase tracking-wider flex items-center gap-2"><Plus className="w-4 h-4" /> Initialize Now</button>}
                                                     </div>
                                                 </td>
                                             </tr>
                                         ) : (
                                             <AnimatePresence>
-                                                {products.map((product) => (
+                                                {activeTab === 'inventory' && products.map((product) => (
                                                     <motion.tr
                                                         key={product.id}
                                                         initial={{ opacity: 0, scale: 0.98 }}
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         exit={{ opacity: 0, filter: 'blur(5px)', transition: { duration: 0.2 } }}
-                                                        className="hover:bg-slate-800/50 transition-colors group relative"
+                                                        className="hover:bg-slate-800/50 transition-colors group relative border-b border-white/5 last:border-0"
                                                     >
                                                         <td className="px-8 py-5">
                                                             <div className="flex items-center gap-5">
@@ -304,6 +385,50 @@ export default function DashboardPage() {
                                                             >
                                                                 <Trash2 className="w-5 h-5" />
                                                             </button>
+                                                        </td>
+                                                    </motion.tr>
+                                                ))}
+
+                                                {activeTab === 'orders' && orders.map((order) => (
+                                                    <motion.tr
+                                                        key={order.id}
+                                                        initial={{ opacity: 0, scale: 0.98 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        className="hover:bg-slate-800/50 transition-colors group relative border-b border-white/5 last:border-0"
+                                                    >
+                                                        <td className="px-8 py-5 font-mono text-sm text-slate-300">{order.id}</td>
+                                                        <td className="px-6 py-5 text-sm text-slate-300">{order.email || 'N/A'}</td>
+                                                        <td className="px-6 py-5 text-sm font-bold text-emerald-400">Rs. {Number(order.totalPrice || 0).toFixed(2)}</td>
+                                                        <td className="px-6 py-5">
+                                                            <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${order.paymentMethod === 'Cash on Delivery' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                                {order.paymentMethod || 'Online'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-5 text-right text-xs text-slate-500">
+                                                            {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}
+                                                        </td>
+                                                    </motion.tr>
+                                                ))}
+
+                                                {activeTab === 'users' && users.map((user) => (
+                                                    <motion.tr
+                                                        key={user.id}
+                                                        initial={{ opacity: 0, scale: 0.98 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        className="hover:bg-slate-800/50 transition-colors group relative border-b border-white/5 last:border-0"
+                                                    >
+                                                        <td className="px-8 py-5 font-mono text-sm text-slate-300">{user.id}</td>
+                                                        <td className="px-6 py-5 text-sm text-slate-300 flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                                                                {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                                                            </div>
+                                                            {user.email || 'N/A'}
+                                                        </td>
+                                                        <td className="px-6 py-5 text-sm font-medium text-white">{user.name || 'Anonymous Node'}</td>
+                                                        <td className="px-8 py-5 text-right text-xs text-slate-500">
+                                                            {user.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A'}
                                                         </td>
                                                     </motion.tr>
                                                 ))}
