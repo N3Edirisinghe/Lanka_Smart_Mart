@@ -43,20 +43,29 @@ export default function DashboardPage() {
             const token = sessionStorage.getItem('adminToken');
             const headers = { 'Authorization': `Bearer ${token}` };
 
-            // Fetch Products
-            const resProducts = await fetch('https://lanka-smart-mart.vercel.app/api/products', { headers });
-            const dataProducts = await resProducts.json();
-            if (dataProducts.success) setProducts(dataProducts.products);
+            const fetchProducts = fetch('https://lanka-smart-mart.vercel.app/api/products', { headers }).then(res => res.json());
+            const fetchOrders = fetch('https://lanka-smart-mart.vercel.app/api/orders', { headers }).then(res => res.json());
+            const fetchUsers = fetch('https://lanka-smart-mart.vercel.app/api/users', { headers }).then(res => res.json());
 
-            // Fetch Orders
-            const resOrders = await fetch('https://lanka-smart-mart.vercel.app/api/orders', { headers });
-            const dataOrders = await resOrders.json();
-            if (dataOrders.success) setOrders(dataOrders.orders);
+            const results = await Promise.allSettled([fetchProducts, fetchOrders, fetchUsers]);
 
-            // Fetch Users
-            const resUsers = await fetch('https://lanka-smart-mart.vercel.app/api/users', { headers });
-            const dataUsers = await resUsers.json();
-            if (dataUsers.success) setUsers(dataUsers.users);
+            if (results[0].status === 'fulfilled' && results[0].value.success) {
+                setProducts(results[0].value.products);
+            } else {
+                console.error("Failed to load products:", results[0].reason || results[0].value?.error);
+            }
+
+            if (results[1].status === 'fulfilled' && results[1].value.success) {
+                setOrders(results[1].value.orders);
+            } else {
+                console.error("Failed to load orders:", results[1].reason || results[1].value?.error);
+            }
+
+            if (results[2].status === 'fulfilled' && results[2].value.success) {
+                setUsers(results[2].value.users);
+            } else {
+                console.error("Failed to load users:", results[2].reason || results[2].value?.error);
+            }
 
         } catch (err) {
             setError('Connection timeout. Data gateway unavailable.');
