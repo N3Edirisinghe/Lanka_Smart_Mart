@@ -29,7 +29,7 @@ class OrderRepositoryImpl @Inject constructor(
 ) : OrderRepository {
 
     override suspend fun placeOrder(order: Order): Resource<String> {
-        return kotlinx.coroutines.withContext(Dispatchers.IO) {
+        return kotlinx.coroutines.withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
             try {
                 // 1. Generate ID locally if not present
                 val newOrderId = if (order.orderId.isNotEmpty()) order.orderId else UUID.randomUUID().toString()
@@ -62,48 +62,53 @@ class OrderRepositoryImpl @Inject constructor(
                     try {
                         val userEmail = auth.currentUser?.email
                         if (!userEmail.isNullOrEmpty()) {
-                            // Launch a detached coroutine so we don't slow down the order success return
-                            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-                                try {
-                                    val apiUrl = "https://lanka-smart-mart.vercel.app/api/send-order-email"
-                                    val url = URL(apiUrl)
-                                    val connection = url.openConnection() as HttpURLConnection
-                                    
-                                    connection.requestMethod = "POST"
-                                    connection.setRequestProperty("Content-Type", "application/json; utf-8")
-                                    connection.setRequestProperty("Accept", "application/json")
-                                    connection.doOutput = true
+                            try {
+                                val apiUrl = "https://lanka-smart-mart.vercel.app/api/send-order-email"
+                                android.util.Log.d("OrderRepository", "Initiating API call to $apiUrl for Order ID $newOrderId")
+                                val url = URL(apiUrl)
+                                val connection = url.openConnection() as HttpURLConnection
+                                
+                                connection.requestMethod = "POST"
+                                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                                connection.setRequestProperty("Accept", "application/json")
+                                connection.doOutput = true
 
-                                    val itemsArray = JSONArray()
-                                    finalOrder.items.forEach { item ->
-                                        val itemJson = JSONObject().apply {
-                                            put("productName", item.productName)
-                                            put("quantity", item.quantity)
-                                            put("productPrice", item.productPrice)
-                                        }
-                                        itemsArray.put(itemJson)
+                                val itemsArray = JSONArray()
+                                finalOrder.items.forEach { item ->
+                                    val itemJson = JSONObject().apply {
+                                        put("productName", item.productName)
+                                        put("quantity", item.quantity)
+                                        put("productPrice", item.productPrice)
                                     }
-
-                                    val jsonInputString = JSONObject().apply {
-                                        put("email", userEmail)
-                                        put("orderId", newOrderId)
-                                        put("totalPrice", finalOrder.totalPrice)
-                                        put("paymentMethod", finalOrder.paymentMethod)
-                                        put("items", itemsArray)
-                                    }.toString()
-
-                                    connection.outputStream.use { os ->
-                                        val input = jsonInputString.toByteArray(Charsets.UTF_8)
-                                        os.write(input, 0, input.size)
-                                    }
-
-                                    val responseCode = connection.responseCode
-                                    if (responseCode != HttpURLConnection.HTTP_OK) {
-                                        android.util.Log.e("OrderRepository", "Failed to send order email: response code $responseCode")
-                                    }
-                                } catch (emailEx: Exception) {
-                                    android.util.Log.e("OrderRepository", "Error sending order email request", emailEx)
+                                    itemsArray.put(itemJson)
                                 }
+
+                                val jsonInputString = JSONObject().apply {
+                                    put("email", userEmail)
+                                    put("orderId", newOrderId)
+                                    put("totalPrice", finalOrder.totalPrice)
+                                    put("paymentMethod", finalOrder.paymentMethod)
+                                    put("items", itemsArray)
+                                }.toString()
+
+                                connection.outputStream.use { os ->
+                                    val input = jsonInputString.toByteArray(Charsets.UTF_8)
+                                    os.write(input, 0, input.size)
+                                }
+
+                                val responseCode = connection.responseCode
+                                val responseStr = if (responseCode == HttpURLConnection.HTTP_OK) {
+                                    connection.inputStream.bufferedReader().use { it.readText() }
+                                } else {
+                                    connection.errorStream?.bufferedReader()?.use { it.readText() }
+                                }
+                                android.util.Log.d("OrderRepository", "Email API Response ($responseCode): $responseStr")
+                                
+                                if (responseCode != HttpURLConnection.HTTP_OK) {
+                                    android.util.Log.e("OrderRepository", "Failed to send order email: response code $responseCode. Body: $responseStr")
+                                }
+                            } catch (emailEx: Exception) {
+                                android.util.Log.e("OrderRepository", "Error sending order email request", emailEx)
                             }
                         }
                     } catch (e: Exception) {
@@ -112,7 +117,10 @@ class OrderRepositoryImpl @Inject constructor(
 
                 } catch (e: Exception) {
                     android.util.Log.e("OrderRepository", "Failed to sync order to cloud, saved locally", e)
-                    // It remains isSynced = false in DB
+                    // If Firestore fails (e.g., Quota Exceeded), we MUST return an error so the UI knows.
+                    // We also revert the local save so the cart is not empty without a real order.
+                    orderDao.deleteOrderById(newOrderId)
+                    return@withContext Resource.Error(e.message ?: "Server Error: Quota Exceeded or Offline")
                 }
                 
                 Resource.Success(newOrderId)
