@@ -276,40 +276,6 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// GET all orders
-app.get('/api/orders', verifyAdmin, async (req, res) => {
-    try {
-        if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
-        const db = admin.firestore();
-        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-        const orders = [];
-        snapshot.forEach(doc => {
-            orders.push({ id: doc.id, ...doc.data() });
-        });
-        res.status(200).send({ success: true, orders });
-    } catch (error) {
-        console.error("Error fetching orders:", error);
-        res.status(500).send({ success: false, error: error.message });
-    }
-});
-
-// GET all users
-app.get('/api/users', verifyAdmin, async (req, res) => {
-    try {
-        if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
-        const db = admin.firestore();
-        const snapshot = await db.collection('users').get();
-        const users = [];
-        snapshot.forEach(doc => {
-            users.push({ id: doc.id, ...doc.data() });
-        });
-        res.status(200).send({ success: true, users });
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        res.status(500).send({ success: false, error: error.message });
-    }
-});
-
 // POST new product (Protected)
 app.post('/api/products', verifyAdmin, async (req, res) => {
     try {
