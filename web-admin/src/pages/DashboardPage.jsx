@@ -17,6 +17,7 @@ export default function DashboardPage() {
 
     // Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
     const [newProduct, setNewProduct] = useState({
         name: '',
         description: '',
@@ -308,10 +309,11 @@ export default function DashboardPage() {
                                             )}
                                             {activeTab === 'orders' && (
                                                 <>
-                                                    <th className="px-8 py-5">Order ID</th>
-                                                    <th className="px-6 py-5">Customer Node</th>
-                                                    <th className="px-6 py-5">Financial Value</th>
-                                                    <th className="px-6 py-5">Payment Method</th>
+                                                    <th className="px-8 py-5">Order Reference</th>
+                                                    <th className="px-6 py-5">Assigned Node</th>
+                                                    <th className="px-6 py-5">Order Value</th>
+                                                    <th className="px-6 py-5">Transaction Core</th>
+                                                    <th className="px-6 py-5">Status</th>
                                                     <th className="px-8 py-5 text-right">Timestamp</th>
                                                 </>
                                             )}
@@ -413,25 +415,90 @@ export default function DashboardPage() {
                                                 ))}
 
                                                 {activeTab === 'orders' && orders.map((order) => (
-                                                    <motion.tr
-                                                        key={order.id}
-                                                        initial={{ opacity: 0, scale: 0.98 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        className="hover:bg-slate-800/50 transition-colors group relative border-b border-white/5 last:border-0"
-                                                    >
-                                                        <td className="px-8 py-5 font-mono text-sm text-slate-300">{order.id}</td>
-                                                        <td className="px-6 py-5 text-sm text-slate-300">{order.email || 'N/A'}</td>
-                                                        <td className="px-6 py-5 text-sm font-bold text-emerald-400">Rs. {Number(order.totalPrice || 0).toFixed(2)}</td>
-                                                        <td className="px-6 py-5">
-                                                            <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${order.paymentMethod === 'Cash on Delivery' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
-                                                                {order.paymentMethod || 'Online'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-8 py-5 text-right text-xs text-slate-500">
-                                                            {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}
-                                                        </td>
-                                                    </motion.tr>
+                                                    <React.Fragment key={order.id}>
+                                                        <motion.tr
+                                                            initial={{ opacity: 0, scale: 0.98 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+                                                            className="hover:bg-slate-800/50 transition-colors group relative border-b border-white/5 cursor-pointer"
+                                                        >
+                                                            <td className="px-8 py-5 font-mono text-sm text-slate-300">{order.id}</td>
+                                                            <td className="px-6 py-5 text-sm text-slate-300">
+                                                                <div>
+                                                                    <p className="font-medium text-white">{order.shippingAddress?.fullName || 'User Name'}</p>
+                                                                    <p className="text-xs text-slate-500 mt-1">{order.userId || 'N/A'}</p>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-5 text-sm font-bold text-emerald-400">Rs. {Number(order.totalPrice || 0).toFixed(2)}</td>
+                                                            <td className="px-6 py-5">
+                                                                <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${order.paymentMethod === 'Cash on Delivery' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                                    {order.paymentMethod || 'Online'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-5">
+                                                                <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${order.status === 'Pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                                                        order.status === 'Processing' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
+                                                                            order.status === 'Delivered' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                                                                'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                                                                    }`}>
+                                                                    {order.status || 'Pending'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-8 py-5 text-right text-xs text-slate-500">
+                                                                {order.createdAt ? new Date(order.createdAt).toLocaleString() : new Date(order.timestamp).toLocaleString() || 'N/A'}
+                                                            </td>
+                                                        </motion.tr>
+
+                                                        {/* Expandable Inner Row */}
+                                                        <AnimatePresence>
+                                                            {expandedOrderId === order.id && (
+                                                                <motion.tr
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    exit={{ opacity: 0, height: 0 }}
+                                                                    className="bg-slate-900/50 border-b border-white/5"
+                                                                >
+                                                                    <td colSpan="6" className="p-6">
+                                                                        <div className="flex gap-8">
+                                                                            <div className="flex-1 bg-slate-950 p-5 rounded-2xl border border-white/5 shadow-inner">
+                                                                                <h3 className="text-emerald-400 text-sm font-bold uppercase tracking-wider mb-4 border-b border-white/10 pb-2 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Purchased Items</h3>
+                                                                                <ul className="space-y-4">
+                                                                                    {order.items?.map((item, idx) => (
+                                                                                        <li key={idx} className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-white/5">
+                                                                                            <div className="flex items-center gap-3">
+                                                                                                <div className="text-slate-200 font-medium text-sm">{item.productName}</div>
+                                                                                            </div>
+                                                                                            <div className="text-right">
+                                                                                                <div className="text-xs text-slate-500">Qty: {item.quantity} × Rs. {item.productPrice.toFixed(2)}</div>
+                                                                                                <div className="text-emerald-400 font-bold text-sm">Rs. {(item.quantity * item.productPrice).toFixed(2)}</div>
+                                                                                            </div>
+                                                                                        </li>
+                                                                                    ))}
+                                                                                </ul>
+                                                                            </div>
+
+                                                                            <div className="w-80 bg-slate-950 p-5 rounded-2xl border border-white/5 shadow-inner self-start">
+                                                                                <h3 className="text-slate-300 text-sm font-bold tracking-wider mb-4 border-b border-white/10 pb-2">Dest. Coordinate Trace</h3>
+                                                                                {order.shippingAddress ? (
+                                                                                    <div className="text-sm text-slate-400 space-y-1.5 leading-relaxed">
+                                                                                        <p><span className="text-slate-500 font-medium w-16 inline-block">Ref:</span> <span className="text-white">{order.shippingAddress.fullName}</span></p>
+                                                                                        <p><span className="text-slate-500 font-medium w-16 inline-block">Comm:</span> <span className="text-emerald-400">{order.shippingAddress.phoneNumber}</span></p>
+                                                                                        <p><span className="text-slate-500 font-medium w-16 inline-block">Loc:</span> {order.shippingAddress.addressLine1}</p>
+                                                                                        {order.shippingAddress.addressLine2 && <p className="pl-16">{order.shippingAddress.addressLine2}</p>}
+                                                                                        <p className="pl-16">{order.shippingAddress.city}</p>
+                                                                                        <p className="pl-16">{order.shippingAddress.district}</p>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <p className="text-slate-500 text-sm italic">Coordinates blocked. Offline trace.</p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </motion.tr>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </React.Fragment>
                                                 ))}
 
                                                 {activeTab === 'users' && users.map((user) => (
