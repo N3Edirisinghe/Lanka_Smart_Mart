@@ -298,16 +298,23 @@ app.get('/api/orders', verifyAdmin, async (req, res) => {
 app.get('/api/users', verifyAdmin, async (req, res) => {
     try {
         if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
-        const db = admin.firestore();
-        // Get all user documents
-        const snapshot = await db.collection('users').get();
-        const users = [];
-        snapshot.forEach(doc => {
-            users.push({ id: doc.id, ...doc.data() });
-        });
+
+        // Use Firebase Auth to bypass Firestore quota limit
+        const limitRes = await admin.auth().listUsers(1000);
+
+        const users = limitRes.users.map(userRecord => ({
+            id: userRecord.uid,
+            email: userRecord.email,
+            name: userRecord.displayName || '',
+            createdAt: userRecord.metadata.creationTime
+        }));
+
+        // Sort by creation time descending (newest first)
+        users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
         res.status(200).send({ success: true, users });
     } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching users from Auth:", error);
         res.status(500).send({ success: false, error: error.message });
     }
 });
