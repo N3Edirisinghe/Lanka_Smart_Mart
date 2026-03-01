@@ -43,9 +43,9 @@ export default function DashboardPage() {
             const token = sessionStorage.getItem('adminToken');
             const headers = { 'Authorization': `Bearer ${token}` };
 
-            const fetchProducts = fetch('http://localhost:3000/api/products', { headers }).then(res => res.json());
-            const fetchOrders = fetch('http://localhost:3000/api/orders', { headers }).then(res => res.json());
-            const fetchUsers = fetch('http://localhost:3000/api/users', { headers }).then(res => res.json());
+            const fetchProducts = fetch('https://lanka-smart-mart.vercel.app/api/products', { headers }).then(res => res.json());
+            const fetchOrders = fetch('https://lanka-smart-mart.vercel.app/api/orders', { headers }).then(res => res.json());
+            const fetchUsers = fetch('https://lanka-smart-mart.vercel.app/api/users', { headers }).then(res => res.json());
 
             const results = await Promise.allSettled([fetchProducts, fetchOrders, fetchUsers]);
 
@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
         try {
             const token = sessionStorage.getItem('adminToken');
-            const res = await fetch(`http://localhost:3000/api/products/${productId}`, {
+            const res = await fetch(`https://lanka-smart-mart.vercel.app/api/products/${productId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -113,7 +113,7 @@ export default function DashboardPage() {
                 stockQuantity: parseInt(newProduct.stockQuantity)
             };
 
-            const res = await fetch('http://localhost:3000/api/products', {
+            const res = await fetch('https://lanka-smart-mart.vercel.app/api/products', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
