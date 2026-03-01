@@ -120,6 +120,28 @@ export default function DashboardPage() {
         }
     };
 
+    const handleDeleteUser = async (userId) => {
+        if (!window.confirm("CONFIRM NODE DELETION: Are you sure you want to permanently revoke access for this user?")) return;
+
+        try {
+            const token = sessionStorage.getItem('adminToken');
+            const res = await fetch(`https://lanka-smart-mart.vercel.app/api/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setUsers(users.filter(u => u.id !== userId));
+            } else {
+                alert(data.error || 'User deletion protocol failed');
+            }
+        } catch (err) {
+            alert("Network disruption during user deletion");
+        }
+    };
+
     const handleAddSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -298,7 +320,8 @@ export default function DashboardPage() {
                                                     <th className="px-8 py-5">User UID</th>
                                                     <th className="px-6 py-5">Email Address</th>
                                                     <th className="px-6 py-5">Display Name</th>
-                                                    <th className="px-8 py-5 text-right">Registered At</th>
+                                                    <th className="px-6 py-5 text-right">Registered At</th>
+                                                    <th className="px-8 py-5 text-right">Admin Exec</th>
                                                 </>
                                             )}
                                         </tr>
@@ -427,8 +450,17 @@ export default function DashboardPage() {
                                                             {user.email || 'N/A'}
                                                         </td>
                                                         <td className="px-6 py-5 text-sm font-medium text-white">{user.name || 'Anonymous Node'}</td>
-                                                        <td className="px-8 py-5 text-right text-xs text-slate-500">
+                                                        <td className="px-6 py-5 text-right text-xs text-slate-500">
                                                             {user.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A'}
+                                                        </td>
+                                                        <td className="px-8 py-5 text-right">
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user.id)}
+                                                                className="p-2.5 text-slate-500 hover:text-red-400 hover:bg-slate-900 border border-transparent hover:border-red-500/30 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                                title="Revoke Node Access"
+                                                            >
+                                                                <Trash2 className="w-5 h-5" />
+                                                            </button>
                                                         </td>
                                                     </motion.tr>
                                                 ))}

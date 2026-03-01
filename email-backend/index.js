@@ -319,6 +319,22 @@ app.get('/api/users', verifyAdmin, async (req, res) => {
     }
 });
 
+// DELETE a user by Auth UID (Protected)
+app.delete('/api/users/:id', verifyAdmin, async (req, res) => {
+    try {
+        if (!admin.apps.length) throw new Error("Firebase Admin not initialized");
+        const userId = req.params.id;
+
+        // Delete the user from Firebase Authentication
+        await admin.auth().deleteUser(userId);
+
+        res.status(200).send({ success: true, message: 'User successfully removed from the system' });
+    } catch (error) {
+        console.error("Error deleting user from Auth:", error);
+        res.status(500).send({ success: false, error: error.message });
+    }
+});
+
 // POST new product (Protected)
 app.post('/api/products', verifyAdmin, async (req, res) => {
     try {
