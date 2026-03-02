@@ -84,5 +84,5 @@ A specialized Node.js service handling automated business logic and external int
 
 ## 👥 Development Team
 *   **E.A.N.T. Edirisinghe (CIT-23-02-0021)**: Lead Developer & Architect
-*   **Tharithwaka (CIT-23-02-0094)**: UI/UX & Core Features
+*   **Thrithwaka (CIT-23-02-0094)**: UI/UX & Core Features
 *   **Binara Hansaka (CIT-23-02-0137)**: Feature Developer & QA
