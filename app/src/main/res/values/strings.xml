@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">LankaSmartMart</string>
+    <string name="stripe_publishable_key">pk_test_51T5ifzDr9aKo4GQGuhfOtaUOhIC319W7DP9QYqCtanBMlh6wLp6AHAGjOta100vD1QRnf0Joee0smcfwsHOQdYLO00CjZTxWat</string> <!-- Test Key -->
+
+
+    <string name="default_web_client_id">155366075305-7r1n4eoel25b81kj9jc4usjl7rtckkrl.apps.googleusercontent.com</string>
+</resources>
